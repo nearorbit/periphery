@@ -36,12 +36,15 @@ contract NavCalculator {
     /* ============ Constants ============= */
 
     uint256 private constant MAX_UINT96 = 2**96 - 1;
+    uint256 private constant ONE = 1 * 10**18;
     address public constant ETH_ADDRESS =
         0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /* ============ State Variables ============ */
 
     address public WETH;
+    address public DAI;
+
     IUniswapV2Router02 public uniRouter;
     IUniswapV2Router02 public sushiRouter;
 
@@ -65,6 +68,7 @@ contract NavCalculator {
 
     constructor(
         address _weth,
+        address _dai,
         address _uniFactory,
         IUniswapV2Router02 _uniRouter,
         address _sushiFactory,
@@ -82,6 +86,7 @@ contract NavCalculator {
         basicIssuanceModule = _basicIssuanceModule;
 
         WETH = _weth;
+        DAI = _dai;
     }
 
     /* ============ Views ============ */
@@ -90,52 +95,59 @@ contract NavCalculator {
         external
         view
         isSetToken(_setToken)
-        returns (uint256 sumEth)
+        returns (uint256 nav)
     {
         // get components
         address[] memory components = _setToken.getComponents();
 
         // variables
         uint256 sumEth = 0;
-        uint256[] memory amountEthIn = new uint256[](components.length);
+        uint256 priceEth = 0;
+        uint256[] memory amountEth = new uint256[](components.length);
         uint256[] memory amountComponents = new uint256[](components.length);
         uint256 sumUsd = 0;
 
         // get total supply
         uint256 totalSupply = _setToken.totalSupply();
 
-        // get price in ETH per component
+        // get price in ETH per component and multiply by contract balance
         for (uint256 i = 0; i < components.length; i++) {
             amountComponents[i] = IERC20(components[i]).balanceOf(
                 address(_setToken)
             );
-            (amountEthIn[i], , ) = _getMinTokenForExactToken(
-                amountComponents[i],
-                WETH,
-                components[i]
+            (amountEth[i], , ) = _getMaxTokenForExactToken(
+                ONE,
+                components[i],
+                WETH
             );
-            sumEth = sumEth.add(amountEthIn[i]);
+            sumEth = sumEth.add(
+                (amountEth[i].mul(amountComponents[i]).div(10**18))
+            );
         }
 
-        // nav = sumUsd / totalSupply;
+        // convert to usd
+        (priceEth, , ) = _getMaxTokenForExactToken(ONE, WETH, DAI);
+        sumUsd = sumEth.mul(priceEth);
+
+        nav = sumUsd.div(totalSupply);
     }
 
     /* ============ Internal ============ */
 
     /**
-     * Compares the amount of token required for an exact amount of another token across both exchanges,
-     * and returns the min amount.
+     * Compares the amount of token received for an exact amount of another token across both exchanges,
+     * and returns the max amount.
      *
-     * @param _amountOut    The amount of output token
+     * @param _amountIn     The amount of input token
      * @param _tokenA       The address of tokenA
      * @param _tokenB       The address of tokenB
      *
-     * @return              The min amount of tokenA required across both exchanges
-     * @return              The Exchange on which minimum amount of tokenA is required
+     * @return              The max amount of tokens that can be received across both exchanges
+     * @return              The Exchange on which maximum amount of token can be received
      * @return              The pair address of the uniswap/sushiswap pool containing _tokenA and _tokenB
      */
-    function _getMinTokenForExactToken(
-        uint256 _amountOut,
+    function _getMaxTokenForExactToken(
+        uint256 _amountIn,
         address _tokenA,
         address _tokenB
     )
@@ -148,50 +160,43 @@ contract NavCalculator {
         )
     {
         if (_tokenA == _tokenB) {
-            return (_amountOut, Exchange.None, ETH_ADDRESS);
+            return (_amountIn, Exchange.None, ETH_ADDRESS);
         }
 
-        uint256 maxIn = PreciseUnitMath.maxUint256();
-        uint256 uniTokenIn = maxIn;
-        uint256 sushiTokenIn = maxIn;
+        uint256 uniTokenOut = 0;
+        uint256 sushiTokenOut = 0;
 
         address uniswapPair = _getPair(uniFactory, _tokenA, _tokenB);
         if (uniswapPair != address(0)) {
             (uint256 reserveIn, uint256 reserveOut) = UniSushiV2Library
                 .getReserves(uniswapPair, _tokenA, _tokenB);
-            // Prevent subtraction overflow by making sure pool reserves are greater than swap amount
-            if (reserveOut > _amountOut) {
-                uniTokenIn = UniSushiV2Library.getAmountIn(
-                    _amountOut,
-                    reserveIn,
-                    reserveOut
-                );
-            }
+            uniTokenOut = UniSushiV2Library.getAmountOut(
+                _amountIn,
+                reserveIn,
+                reserveOut
+            );
         }
 
         address sushiswapPair = _getPair(sushiFactory, _tokenA, _tokenB);
         if (sushiswapPair != address(0)) {
             (uint256 reserveIn, uint256 reserveOut) = UniSushiV2Library
                 .getReserves(sushiswapPair, _tokenA, _tokenB);
-            // Prevent subtraction overflow by making sure pool reserves are greater than swap amount
-            if (reserveOut > _amountOut) {
-                sushiTokenIn = UniSushiV2Library.getAmountIn(
-                    _amountOut,
-                    reserveIn,
-                    reserveOut
-                );
-            }
+            sushiTokenOut = UniSushiV2Library.getAmountOut(
+                _amountIn,
+                reserveIn,
+                reserveOut
+            );
         }
 
-        // Fails if both the values are maxIn
-        // require(
-        //     !(uniTokenIn == maxIn && sushiTokenIn == maxIn),
-        //     "ExchangeIssuance: ILLIQUID_SET_COMPONENT"
-        // );
+        // Fails if both the values are 0
+        require(
+            !(uniTokenOut == 0 && sushiTokenOut == 0),
+            "ExchangeIssuance: ILLIQUID_SET_COMPONENT"
+        );
         return
-            (uniTokenIn <= sushiTokenIn)
-                ? (uniTokenIn, Exchange.Uniswap, uniswapPair)
-                : (sushiTokenIn, Exchange.Sushiswap, sushiswapPair);
+            (uniTokenOut >= sushiTokenOut)
+                ? (uniTokenOut, Exchange.Uniswap, uniswapPair)
+                : (sushiTokenOut, Exchange.Sushiswap, sushiswapPair);
     }
 
     /**
