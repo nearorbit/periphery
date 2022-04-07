@@ -73,7 +73,7 @@ contract NavCalculator {
         external
         view
         isSetToken(_setToken)
-        returns (uint256)
+        returns (address[] memory)
     {
         // get components
         address[] memory components = _setToken.getComponents();
@@ -81,5 +81,6 @@ contract NavCalculator {
         // get total supply
 
         // get price in ETH per component
+        return components;
     }
 }
