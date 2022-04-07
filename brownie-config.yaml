@@ -1,0 +1,23 @@
+
+reports:
+dependencies:
+  - OpenZeppelin/openzeppelin-contracts@3.4.0
+
+compiler:
+  solc:
+    version: 0.6.10
+    optimizer:
+      enabled: true
+      runs: 1
+    remappings:
+      - "@openzeppelin/contracts=OpenZeppelin/openzeppelin-contracts@3.4.0/contracts"
+      - "@uniswap/v2-core/contracts=Uniswap/v2-core@1.0.1/contracts"
+      - "@uniswap/v2-periphery/contracts=Uniswap/v2-periphery@1.0.0-beta.0/contracts"
+
+
+
+# automatically fetch contract sources from Etherscan
+autofetch_sources: True
+dotenv: .env
+networks:
+  default: aurora-main-fork
