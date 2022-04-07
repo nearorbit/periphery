@@ -18,6 +18,15 @@ import {IWETH} from "./interfaces/IWETH.sol";
 import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
 import {UniSushiV2Library} from "../../external/contracts/UniSushiV2Library.sol";
 
+/**
+ * @title NavCalculator
+ * @author cowboy0x@protonmail.com
+ *
+ * Contract for calculating onchain net asset value (nav). Meant to be used for offchain nav and price tracking.
+ * Warning, should not be used as an oracle or replacement of an oracle.
+ *
+ */
+
 contract NavCalculator {
     using Address for address payable;
     using SafeMath for uint256;
