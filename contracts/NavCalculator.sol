@@ -24,6 +24,21 @@ contract NavCalculator {
     using PreciseUnitMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for ISetToken;
+
+    /* ============ Enums ============ */
+
+    enum Exchange {
+        Uniswap,
+        Sushiswap,
+        None
+    }
+
+    /* ============ Constants ============= */
+
+    uint256 private constant MAX_UINT96 = 2**96 - 1;
+    address public constant ETH_ADDRESS =
+        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
     /* ============ State Variables ============ */
 
     address public WETH;
@@ -69,18 +84,130 @@ contract NavCalculator {
         WETH = _weth;
     }
 
+    /* ============ Views ============ */
+
     function getEstimatedNav(ISetToken _setToken)
         external
         view
         isSetToken(_setToken)
-        returns (address[] memory)
+        returns (uint256 sumEth)
     {
         // get components
         address[] memory components = _setToken.getComponents();
 
+        // variables
+        uint256 sumEth = 0;
+        uint256[] memory amountEthIn = new uint256[](components.length);
+        uint256[] memory amountComponents = new uint256[](components.length);
+        uint256 sumUsd = 0;
+
         // get total supply
+        uint256 totalSupply = _setToken.totalSupply();
 
         // get price in ETH per component
-        return components;
+        for (uint256 i = 0; i < components.length; i++) {
+            amountComponents[i] = IERC20(components[i]).balanceOf(
+                address(_setToken)
+            );
+            (amountEthIn[i], , ) = _getMinTokenForExactToken(
+                amountComponents[i],
+                WETH,
+                components[i]
+            );
+            sumEth = sumEth.add(amountEthIn[i]);
+        }
+
+        // nav = sumUsd / totalSupply;
+    }
+
+    /* ============ Internal ============ */
+
+    /**
+     * Compares the amount of token required for an exact amount of another token across both exchanges,
+     * and returns the min amount.
+     *
+     * @param _amountOut    The amount of output token
+     * @param _tokenA       The address of tokenA
+     * @param _tokenB       The address of tokenB
+     *
+     * @return              The min amount of tokenA required across both exchanges
+     * @return              The Exchange on which minimum amount of tokenA is required
+     * @return              The pair address of the uniswap/sushiswap pool containing _tokenA and _tokenB
+     */
+    function _getMinTokenForExactToken(
+        uint256 _amountOut,
+        address _tokenA,
+        address _tokenB
+    )
+        internal
+        view
+        returns (
+            uint256,
+            Exchange,
+            address
+        )
+    {
+        if (_tokenA == _tokenB) {
+            return (_amountOut, Exchange.None, ETH_ADDRESS);
+        }
+
+        uint256 maxIn = PreciseUnitMath.maxUint256();
+        uint256 uniTokenIn = maxIn;
+        uint256 sushiTokenIn = maxIn;
+
+        address uniswapPair = _getPair(uniFactory, _tokenA, _tokenB);
+        if (uniswapPair != address(0)) {
+            (uint256 reserveIn, uint256 reserveOut) = UniSushiV2Library
+                .getReserves(uniswapPair, _tokenA, _tokenB);
+            // Prevent subtraction overflow by making sure pool reserves are greater than swap amount
+            if (reserveOut > _amountOut) {
+                uniTokenIn = UniSushiV2Library.getAmountIn(
+                    _amountOut,
+                    reserveIn,
+                    reserveOut
+                );
+            }
+        }
+
+        address sushiswapPair = _getPair(sushiFactory, _tokenA, _tokenB);
+        if (sushiswapPair != address(0)) {
+            (uint256 reserveIn, uint256 reserveOut) = UniSushiV2Library
+                .getReserves(sushiswapPair, _tokenA, _tokenB);
+            // Prevent subtraction overflow by making sure pool reserves are greater than swap amount
+            if (reserveOut > _amountOut) {
+                sushiTokenIn = UniSushiV2Library.getAmountIn(
+                    _amountOut,
+                    reserveIn,
+                    reserveOut
+                );
+            }
+        }
+
+        // Fails if both the values are maxIn
+        // require(
+        //     !(uniTokenIn == maxIn && sushiTokenIn == maxIn),
+        //     "ExchangeIssuance: ILLIQUID_SET_COMPONENT"
+        // );
+        return
+            (uniTokenIn <= sushiTokenIn)
+                ? (uniTokenIn, Exchange.Uniswap, uniswapPair)
+                : (sushiTokenIn, Exchange.Sushiswap, sushiswapPair);
+    }
+
+    /**
+     * Returns the pair address for on a given DEX.
+     *
+     * @param _factory   The factory to address
+     * @param _tokenA    The address of tokenA
+     * @param _tokenB    The address of tokenB
+     *
+     * @return           The pair address (Note: address(0) is returned by default if the pair is not available on that DEX)
+     */
+    function _getPair(
+        address _factory,
+        address _tokenA,
+        address _tokenB
+    ) internal view returns (address) {
+        return IUniswapV2Factory(_factory).getPair(_tokenA, _tokenB);
     }
 }

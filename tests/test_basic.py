@@ -10,6 +10,6 @@ def test_my_custom_test(set, deployed):
     (exchange) = deployed
     print(set.address)
 
-    x = exchange.getEstimatedNav(set.address)
+    x = exchange.getEstimatedNav(set)
     print(x)
     assert True

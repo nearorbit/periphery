@@ -19,8 +19,6 @@ def deployed():
     """
     add contract arguments for deployment
     """
-    dev = '0x76F828E072F9E1c148Ffb1806421eD3472f84eaD'
-
     WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
     UNI_FACTORY = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'
     UNI_ROUTER = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
@@ -30,6 +28,8 @@ def deployed():
 
     CONTROLLER = "0xa4c8d221d8BB851f83aadd0223a8900A6921A349"
     ISSUANCE = "0xd8EF3cACe8b4907117a45B0b125c68560532F94D"
+
+    dev = accounts.at('0x76F828E072F9E1c148Ffb1806421eD3472f84eaD', force=True)
 
     """
     deploy all contracts in system
