@@ -16,7 +16,7 @@ import {IController} from "./interfaces/IController.sol";
 import {ISetToken} from "./interfaces/ISetToken.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {PreciseUnitMath} from "./lib/PreciseUnitMath.sol";
-import {UniSushiV2Library} from "../../external/contracts/UniSushiV2Library.sol";
+import {UniSushiV2Library} from "./external/contracts/UniSushiV2Library.sol";
 
 /**
  * @title NavCalculator

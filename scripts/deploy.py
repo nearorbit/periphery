@@ -33,15 +33,12 @@ def main():
     exchange = deploy_exchange(
         dev, WETH, DAI, UNI_FACTORY, UNI_ROUTER, SUSHI_FACTORY, SUSHI_ROUTER, CONTROLLER, ISSUANCE)
 
-    """
-    return system fixture
-    """
-    return (exchange)
+    print('exchange deployed at:', exchange.address)
 
 
 def deploy_exchange(dev, WETH, DAI, UNI_FACTORY, UNI_ROUTER, SUSHI_FACTORY, SUSHI_ROUTER, CONTROLLER, ISSUANCE):
     instance = NavCalculator.deploy(
-        WETH, DAI, UNI_FACTORY, UNI_ROUTER, SUSHI_FACTORY, SUSHI_ROUTER, CONTROLLER, ISSUANCE, {'from': dev})
+        WETH, DAI, UNI_FACTORY, UNI_ROUTER, SUSHI_FACTORY, SUSHI_ROUTER, CONTROLLER, ISSUANCE, {'from': dev, 'allow_revert': True})
     return instance
 
 

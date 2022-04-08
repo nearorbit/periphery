@@ -1,29 +1,15 @@
 {
-    "main": "dist",
-    "scripts": {
-        "build": "yarn clean && yarn compile && yarn build:ts:latest",
-        "build:npm:latest": "yarn clean && yarn compile:latest && yarn build:ts:latest",
-        "build:npm:hardhat": "yarn clean && yarn compile && yarn build:ts:hardhat",
-        "build:ts:latest": "yarn typechain && yarn transpile:dist:latest",
-        "build:ts:hardhat": "yarn typechain && yarn transpile:dist:hardhat",
-        "chain": "npx hardhat node",
-        "clean": "./scripts/clean.sh",
-        "compile": "npx hardhat compile",
-        "deploy:aurora": "yarn clean && yarn compile && npx hardhat run scripts/mainnet-deploy.ts --network mainnet_aurora",
-        "subgraph:init": "npx graph init --product hosted-service --network mumbai --from-contract 0x00"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/SetProtocol/set-protocol-v2.git"
-    },
-    "author": "cowboy0x",
+    "name": "exchange",
+    "version": "1.0.0",
+    "main": "index.js",
     "license": "MIT",
-    "homepage": "https://github.com/SetProtocol",
-    "resolutions": {
-        "babel-code-frame/chalk": "4.1.0"
-    },
-    "engines": {
-        "yarn": ">=1.10.1"
+    "scripts": {
+        "clean": "rm -rf ./artifacts/ ./cache/",
+        "compile": "npx hardhat compile",
+        "test": "",
+        "deploy:ropsten": "yarn clean && yarn compile && npx hardhat run scripts/deploy.js --network ropsten",
+        "deploy:aurora": "yarn clean && yarn compile && npx hardhat run scripts/deploy.ts --network mainnet_aurora",
+        "subgraph:init": "npx graph init --product hosted-service --network mumbai --from-contract 0x00"
     },
     "devDependencies": {
         "@0x/utils": "^6.4.3",
@@ -61,13 +47,12 @@
         "solidity-coverage": "^0.7.17",
         "ts-generator": "^0.1.1",
         "ts-node": "^8.10.2",
-        "tslint": "^6.1.3",
-        "tslint-eslint-rules": "^5.3.1",
         "typechain": "6.1.0",
         "typescript": "^4.4.3",
         "web3": "^1.2.9"
     },
     "dependencies": {
+        "@uniswap/v2-periphery": "^1.1.0-beta.0",
         "@uniswap/v3-sdk": "^3.5.1",
         "ethers": "^5.5.2",
         "fs-extra": "^5.0.0",
@@ -79,25 +64,5 @@
         "@nomiclabs/hardhat-ethers": "^2.0.1",
         "ethereum-waffle": "^3.2.1",
         "hardhat": "^2.2.1"
-    },
-    "_moduleAliases": {
-        "@utils": "utils",
-        "@typechain": "typechain"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "yarn precommit"
-        }
-    },
-    "lint-staged": {
-        "contracts/**/*.sol": [
-            "yarn lint-sol --fix"
-        ],
-        "test/**/*.ts": [
-            "yarn lint-ts --fix"
-        ],
-        "utils/**/*.ts": [
-            "yarn lint-ts --fix"
-        ]
     }
 }
