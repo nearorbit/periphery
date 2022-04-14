@@ -138,7 +138,7 @@ contract NavCalculator {
         (priceEth, , ) = _getMaxTokenForExactToken(ONE, WETH, DAI);
         sumUsd = sumEth.mul(priceEth);
 
-        nav = sumUsd.div(totalSupply);
+        nav = (totalSupply > 0 ? sumUsd.div(totalSupply) : 0);
     }
 
     /* ============ Internal ============ */
