@@ -9,17 +9,19 @@ const hre = require("hardhat");
  * PARAMS
  * */
 
+const AURORA = "0x8BEc47865aDe3B172A928df8f990Bc7f2A3b9f79";
 const WETH = "0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB";
+const DAI = "0xe3520349F477A5F6EB06107066048508498A291b";
+const USDT = "0x4988a896b1227218e4A686fdE5EabdcAbd91571f";
+const USDC = "0xB12BFcA5A55806AaF64E99521918A4bf0fC40802";
 
-const UNI_FACTORY = "0xc66F594268041dB60507F00703b152492fb176E7";
-const UNI_ROUTER = "0x2CB45Edb4517d5947aFdE3BEAbF95A582506858B";
+const EXCHANGE = "0x74373626449a57c8d0322faf2e864efd99d7bd56";
 
-const SUSHI_FACTORY = "0x7928D4FeA7b2c90C732c10aFF59cf403f0C38246";
-const SUSHI_ROUTER = "0xa3a1eF5Ae6561572023363862e238aFA84C72ef5";
+const TOKENS = [AURORA, WETH, DAI, USDT, USDC];
 
-const CONTROLLER = "0x5636444570D6308963b05354C39f8174a9710EdA";
-const ISSUANCE = "0x1Aa35A9c1e942A9bf8f9C83Adb36b83355Fef5b0";
-
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 /*
  * DEPLOY
  * */
@@ -31,17 +33,14 @@ async function main() {
     `${process.env.AURORA_PRIVATE_KEY}`,
     provider
   );
+
   const Exchange = await hre.ethers.getContractFactory("ExchangeIssuanceV2");
-  const exchange = await Exchange.connect(deployerWallet).deploy(
-    WETH,
-    UNI_FACTORY,
-    UNI_ROUTER,
-    SUSHI_FACTORY,
-    SUSHI_ROUTER,
-    CONTROLLER,
-    ISSUANCE
-  );
-  await exchange.deployed();
+  const exchange = await Exchange.connect(deployerWallet).attach(EXCHANGE);
+
+  for (let token of TOKENS) {
+    await exchange.approveToken(token);
+    await delay(30000);
+  }
 }
 
 main()
